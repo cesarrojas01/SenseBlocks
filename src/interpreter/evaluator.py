@@ -16,19 +16,30 @@ class EvaluationError(Exception):
 
 class UndefinedVariableError(EvaluationError):
     """Excepción lanzada cuando se intenta acceder a una variable no definida."""
-    pass
+    def __init__(self, variable_name):
+        message = f"La variable '{variable_name}' no está definida. Asegúrate de que hayas guardado un número en esa variable antes de usarla."
+        super().__init__(message)
+
 
 class DivisionByZeroError(EvaluationError):
     """Excepción lanzada cuando se intenta dividir por cero."""
-    pass
+    def __init__(self):
+        message = "No puedes dividir por cero. Prueba con otro número para que la operación funcione."
+        super().__init__(message)
 
 class InvalidOperationError(EvaluationError):
     """Excepción lanzada cuando se utiliza un operador desconocido."""
-    pass
+    def __init__(self, operation):
+        message = f"La operación '{operation}' no es válida. Revisa si los bloques que usaste son los correctos."
+        super().__init__(message)
+
 
 class TypeMismatchError(EvaluationError):
     """Excepción lanzada cuando hay un desajuste de tipos en una operación."""
-    pass
+    def __init__(self, expected_type, received_type):
+        message = f"Esperaba un {expected_type}, pero recibí un {received_type}. Usa el bloque correcto para esta operación."
+        super().__init__(message)
+
 
 class Evaluator:
     """Evaluador que ejecuta el AST generado por el parser."""
@@ -125,7 +136,7 @@ class Evaluator:
 
         if isinstance(node.expression, VariableNode):
             variable_name = node.expression.name
-            message = f"El valor de la variable '{variable_name}' es: {value}"
+            message = f"El valor de la variable {variable_name} es: {value}"
         else:
             message = f"El resultado de la expresión es: {value}"
 
@@ -212,9 +223,9 @@ class Evaluator:
         """
         operand_value = self.evaluate(node.operand)
 
-        if node.operator == TokenType.NOT:
+        if node.operator == TokenType.NO:
             return int(not operand_value)
-        elif node.operator == TokenType.MINUS:
+        elif node.operator == TokenType.MENOS:
             return -operand_value
         else:
             raise InvalidOperationError(f"Operador unario desconocido: {node.operator.name}")
@@ -266,25 +277,25 @@ class Evaluator:
         """
         # Operadores numéricos
         numeric_operators = {
-            TokenType.PLUS: op.add,
-            TokenType.MINUS: op.sub,
-            TokenType.MULTIPLY: op.mul,
-            TokenType.DIVIDE: self.safe_divide,
+            TokenType.MAS: op.add,
+            TokenType.MENOS: op.sub,
+            TokenType.MULTIPLICAR: op.mul,
+            TokenType.DIVIDIR: self.safe_divide,
             TokenType.MODULO: op.mod,
-            TokenType.LESS: lambda l, r: int(l < r),
-            TokenType.LESS_EQUAL: lambda l, r: int(l <= r),
-            TokenType.GREATER: lambda l, r: int(l > r),
-            TokenType.GREATER_EQUAL: lambda l, r: int(l >= r),
-            TokenType.EQUAL: lambda l, r: int(l == r),
-            TokenType.DIFFERENT: lambda l, r: int(l != r),
-            TokenType.AND: lambda l, r: int(bool(l) and bool(r)),
-            TokenType.OR: lambda l, r: int(bool(l) or bool(r)),
+            TokenType.MENOR_QUE: lambda l, r: int(l < r),
+            TokenType.MENOR_O_IGUAL_QUE: lambda l, r: int(l <= r),
+            TokenType.MAYOR_QUE: lambda l, r: int(l > r),
+            TokenType.MAYOR_O_IGUAL_QUE: lambda l, r: int(l >= r),
+            TokenType.IGUAL: lambda l, r: int(l == r),
+            TokenType.DIFERENTE: lambda l, r: int(l != r),
+            TokenType.Y: lambda l, r: int(bool(l) and bool(r)),
+            TokenType.O: lambda l, r: int(bool(l) or bool(r)),
         }
 
         string_operators = {
-            TokenType.PLUS: lambda l, r: l + r,
-            TokenType.MINUS: lambda l, r: l.replace(r, ""),
-            TokenType.MULTIPLY: lambda l, r: l * r if isinstance(r, int) else l,
+            TokenType.MAS: lambda l, r: l + r,
+            TokenType.MENOS: lambda l, r: l.replace(r, ""),
+            TokenType.MULTIPLICAR: lambda l, r: l * r if isinstance(r, int) else l,
             # Otros operadores para cadenas pueden agregarse aquí
         }
 

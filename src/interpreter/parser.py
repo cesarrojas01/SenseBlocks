@@ -10,26 +10,27 @@ from typing import List, Dict, Optional
 class ParseError(Exception):
     """Excepción personalizada lanzada por errores durante el análisis sintáctico."""
     def __init__(self, message, position=None):
-        super().__init__(message)
+        friendly_message = f"Algo no está bien: {message}. Vamos a revisar esta parte con calma."
+        super().__init__(friendly_message)
         self.position = position
-        speak(message)
+        speak(friendly_message)
 
 
 # Tabla de precedencia de operadores
 PRECEDENCE: Dict[TokenType, int] = {
-    TokenType.OR: 1,
-    TokenType.AND: 2,
-    TokenType.NOT: 3,
-    TokenType.EQUAL: 4,
-    TokenType.DIFFERENT: 4,
-    TokenType.LESS: 5,
-    TokenType.LESS_EQUAL: 5,
-    TokenType.GREATER: 5,
-    TokenType.GREATER_EQUAL: 5,
-    TokenType.PLUS: 6,
-    TokenType.MINUS: 6,
-    TokenType.MULTIPLY: 7,
-    TokenType.DIVIDE: 7,
+    TokenType.O: 1,
+    TokenType.Y: 2,
+    TokenType.NO: 3,
+    TokenType.IGUAL: 4,
+    TokenType.DIFERENTE: 4,
+    TokenType.MENOR_QUE: 5,
+    TokenType.MENOR_O_IGUAL_QUE: 5,
+    TokenType.MAYOR_QUE: 5,
+    TokenType.MAYOR_O_IGUAL_QUE: 5,
+    TokenType.MAS: 6,
+    TokenType.MENOS: 6,
+    TokenType.MULTIPLICAR: 7,
+    TokenType.DIVIDIR: 7,
     TokenType.MODULO: 7
 }
 
@@ -62,7 +63,7 @@ class Parser:
         try:
             return self.parse_program()
         except IndexError:
-            raise ParseError("El análisis se detuvo de forma inesperada. Revisa la estructura del programa.")
+            raise ParseError("El análisis se detuvo de forma inesperada. Tal vez falta algo en el programa.")
 
     def parse_program(self) -> ProgramNode:
         """
@@ -74,13 +75,13 @@ class Parser:
         Raises:
             ParseError: Si falta el token 'START' o 'END'.
         """
-        self.expect(TokenType.START, "El programa debe comenzar con el bloque 'INICIO'.")
+        self.expect(TokenType.INICIO, "El programa debe comenzar con el bloque 'INICIO'. ¡Recuerda siempre iniciar con este bloque!")
         statements = []
 
-        while not self.match(TokenType.END):
+        while not self.match(TokenType.FIN):
             statements.append(self.parse_statement())
 
-        self.expect(TokenType.END, "El programa debe terminar con el bloque 'FIN'.")
+        self.expect(TokenType.FIN, "El programa debe terminar con el bloque 'FIN'. Asegúrate de que el bloque final esté bien colocado.")
         return ProgramNode(statements)
 
     def parse_statement(self) -> ASTNode:
@@ -95,20 +96,20 @@ class Parser:
         """
         token_type = self.current_token().type
 
-        if token_type == TokenType.SET:
+        if token_type == TokenType.ASIGNAR:
             return self.parse_set_statement()
-        elif token_type == TokenType.INPUT:
+        elif token_type == TokenType.LEER:
             return self.parse_input_statement()
-        elif token_type == TokenType.SAY:
+        elif token_type == TokenType.DECIR:
             return self.parse_print_statement()
-        elif token_type == TokenType.IF_START:
+        elif token_type == TokenType.SI:
             return self.parse_if_statement()
-        elif token_type == TokenType.FOR_START:
+        elif token_type == TokenType.PARA:
             return self.parse_for_statement()
-        elif token_type == TokenType.WHILE_START:
+        elif token_type == TokenType.MIENTRAS:
             return self.parse_while_statement()
 
-        raise ParseError(f"Se encontró un token inesperado '{token_type.name}' en la posición {self.position}. Revisa la sintaxis.")
+        raise ParseError(f"Encontré algo inesperado '{token_type.name}' en la posición {self.position}. Vamos a revisar la estructura.")
 
     def parse_set_statement(self) -> SetNode:
         """
@@ -120,7 +121,7 @@ class Parser:
         Raises:
             ParseError: Si el formato de la sentencia 'SET' no es válido.
         """
-        self.expect(TokenType.SET, "Se esperaba la palabra clave 'SET' para asignar un valor.")
+        self.expect(TokenType.ASIGNAR, "¡Oh, parece que falta el 'SET' para asignar algo! Vamos a colocarlo.")
         variable = self.parse_variable()
         expression = self.parse_expression()  # Continuar con la evaluación normal
         return SetNode(variable, expression)
@@ -132,7 +133,7 @@ class Parser:
         Returns:
             InputNode: Nodo que representa la instrucción INPUT.
         """
-        self.expect(TokenType.INPUT, "Se esperaba la palabra clave 'INPUT' para recibir una entrada de voz.")
+        self.expect(TokenType.LEER, "Falta la palabra 'INPUT' para recibir lo que diga. ¡Vamos a incluirla!")
         variable = self.parse_variable()
         return InputNode(variable)
 
@@ -146,7 +147,7 @@ class Parser:
         Raises:
             ParseError: Si falta una expresión después del token 'PRINT'.
         """
-        self.expect(TokenType.SAY, "Se esperaba la palabra clave 'DECIR' para imprimir una expresión.")
+        self.expect(TokenType.DECIR, "¡Recuerda usar 'DECIR' para que se escuche lo que quieres imprimir!")
         expression = self.parse_expression()
         return PrintNode(expression)
 
@@ -160,16 +161,16 @@ class Parser:
         Raises:
             ParseError: Si el formato de la estructura condicional es incorrecto.
         """
-        self.expect(TokenType.IF_START, "Se esperaba el bloque 'SI'.")
+        self.expect(TokenType.SI, "Falta el bloque 'SI'. ¡Vamos a agregarlo para que podamos tomar decisiones!")
         condition = self.parse_expression()
-        true_branch = self.parse_block(end_token=TokenType.IF_END, complement_token=TokenType.COMPLEMENT)
+        true_branch = self.parse_block(end_token=TokenType.FIN_SI, complement_token=TokenType.COMPLEMENTO)
 
         false_branch = []
-        if self.current_token().type == TokenType.IF_ELSE:
+        if self.current_token().type == TokenType.SINO:
             self.advance()
             false_branch = self.parse_else_block()
 
-        self.expect(TokenType.IF_END, "Se esperaba el bloque 'FIN SI' para cerrar la estructura condicional.")
+        self.expect(TokenType.FIN_SI, "¡No te olvides de cerrar el bloque 'FIN SI' al final de tu decisión!")
         return IfNode(condition, true_branch, false_branch)
 
     def parse_else_block(self) -> List[ASTNode]:
@@ -182,18 +183,18 @@ class Parser:
         Raises:
             ParseError: Si la estructura 'ELSE' o 'ELSE IF' es incorrecta.
         """
-        if self.current_token().type in {TokenType.IDENTIFIER, TokenType.NUMBER}:
+        if self.current_token().type in {TokenType.VARIABLE, TokenType.NUMERO}:
             condition = self.parse_expression()
-            if_body = self.parse_block(end_token=TokenType.IF_END, complement_token=TokenType.COMPLEMENT)
+            if_body = self.parse_block(end_token=TokenType.FIN_SI, complement_token=TokenType.COMPLEMENTO)
 
             else_body = []
-            if self.current_token().type == TokenType.IF_ELSE:
+            if self.current_token().type == TokenType.SINO:
                 self.advance()
                 else_body = self.parse_else_block()
 
             return [IfNode(condition, if_body, else_body)]
 
-        return self.parse_block(end_token=TokenType.IF_END, complement_token=TokenType.COMPLEMENT)
+        return self.parse_block(end_token=TokenType.FIN_SI, complement_token=TokenType.COMPLEMENTO)
 
     def parse_for_statement(self) -> ForNode:
         """
@@ -205,13 +206,13 @@ class Parser:
         Raises:
             ParseError: Si el formato del bucle 'FOR' es incorrecto.
         """
-        self.expect(TokenType.FOR_START, "Se esperaba el bloque 'PARA'.")
+        self.expect(TokenType.PARA, "Parece que falta el bloque 'PARA' para iniciar el bucle. ¡Vamos a incluirlo!")
         control_variable = self.parse_variable()
         start_value = self.parse_expression()
-        self.expect(TokenType.TO, "Se esperaba la palabra clave 'HASTA' en la declaración 'PARA'.")
+        self.expect(TokenType.HASTA, "Falta el 'HASTA' para completar la declaración del ciclo 'PARA'.")
         end_value = self.parse_expression()
-        body = self.parse_block(end_token=TokenType.FOR_END, complement_token=TokenType.COMPLEMENT)
-        self.expect(TokenType.FOR_END, "Se esperaba el bloque 'FIN PARA' para cerrar el ciclo.")
+        body = self.parse_block(end_token=TokenType.FIN_PARA, complement_token=TokenType.COMPLEMENTO)
+        self.expect(TokenType.FIN_PARA, "¡Recuerda terminar el ciclo con 'FIN PARA'!")
         return ForNode(control_variable, start_value, end_value, body)
 
     def parse_while_statement(self) -> WhileNode:
@@ -219,15 +220,15 @@ class Parser:
         Analiza un bucle 'WHILE'.
 
         Returns:
-            WhileNode: Nodo que representa el bucle 'WHILE'..
+            WhileNode: Nodo que representa el bucle 'WHILE'.
 
         Raises:
             ParseError: Si el formato del bucle 'WHILE' es incorrecto.
         """
-        self.expect(TokenType.WHILE_START, "Se esperaba el bloque 'MIENTRAS'.")
+        self.expect(TokenType.MIENTRAS, "Para iniciar el ciclo falta el bloque 'MIENTRAS'. ¡No lo olvides!")
         condition = self.parse_expression()
-        body = self.parse_block(end_token=TokenType.WHILE_END, complement_token=TokenType.COMPLEMENT)
-        self.expect(TokenType.WHILE_END, "Se esperaba el bloque 'FIN MIENTRAS' para cerrar el ciclo.")
+        body = self.parse_block(end_token=TokenType.FIN_MIENTRAS, complement_token=TokenType.COMPLEMENTO)
+        self.expect(TokenType.FIN_MIENTRAS, "¡Recuerda cerrar el ciclo con 'FIN MIENTRAS'!")
         return WhileNode(condition, body)
 
     def parse_expression(self, precedence: int = 0) -> ASTNode:
@@ -246,7 +247,7 @@ class Parser:
         token = self.advance()
 
         # Verificar si hay secuencia de números consecutivos para formar un número completo
-        if token.type == TokenType.NUMBER:
+        if token.type == TokenType.NUMERO:
             left = self.combine_consecutive_numbers(token)
         else:
             left = self.nud(token)
@@ -274,7 +275,7 @@ class Parser:
         number_value = str(token.value)
         
         # Combinar números consecutivos
-        while self.match(TokenType.NUMBER):
+        while self.match(TokenType.NUMERO):
             number_token = self.advance()
             number_value += str(number_token.value)
         
@@ -293,19 +294,19 @@ class Parser:
         Raises:
             ParseError: Si el token es inesperado en el contexto actual.
         """
-        if token.type == TokenType.NUMBER:
+        if token.type == TokenType.NUMERO:
             return NumberNode(token.value)
-        elif token.type == TokenType.IDENTIFIER:
+        elif token.type == TokenType.VARIABLE:
             return VariableNode(token.value)
-        elif token.type == TokenType.LPAREN:
+        elif token.type == TokenType.PARENTESIS_IZQUIERDO:
             expr = self.parse_expression()
-            self.expect(TokenType.RPAREN, "Se esperaba un paréntesis de cierre ')' para la expresión.")
+            self.expect(TokenType.PARENTESIS_DERECHO, "Falta cerrar la expresión con un paréntesis de cierre ')'. ¡No olvides cerrarlo!")
             return expr
-        elif token.type in {TokenType.NOT, TokenType.MINUS}:
+        elif token.type in {TokenType.NO, TokenType.MENOS}:
             operand = self.parse_expression(PRECEDENCE[token.type])
             return UnaryOperationNode(token.type, operand)
 
-        raise ParseError(f"Se encontró un token inesperado '{token.type.name}' en la posición {self.position}. Revisa la sintaxis de la expresión.")
+        raise ParseError(f"Encontré algo inesperado en '{token.type.name}'. ¡Vamos a verificar esta expresión!")
 
     def led(self, left: ASTNode, token: Token) -> ASTNode:
         """
@@ -323,22 +324,22 @@ class Parser:
         """
         # Revisar si el token es un operador binario válido
         valid_operators = {
-            TokenType.PLUS, TokenType.MINUS, TokenType.MULTIPLY, TokenType.DIVIDE,
-            TokenType.EQUAL, TokenType.DIFFERENT, TokenType.LESS, TokenType.GREATER,
-            TokenType.LESS_EQUAL, TokenType.GREATER_EQUAL, TokenType.AND, TokenType.OR, TokenType.MODULO
+            TokenType.MAS, TokenType.MENOS, TokenType.MULTIPLICAR, TokenType.DIVIDIR,
+            TokenType.IGUAL, TokenType.DIFERENTE, TokenType.MENOR_QUE, TokenType.MAYOR_QUE,
+            TokenType.MENOR_O_IGUAL_QUE, TokenType.MAYOR_O_IGUAL_QUE, TokenType.Y, TokenType.O, TokenType.MODULO
         }
         
         if token.type not in valid_operators:
-            raise ParseError(f"Se encontró un token inesperado '{token.type.name}' en la posición {self.position}. Revisa la sintaxis de la expresión.")
-        
+            raise ParseError(f"Encontré algo inesperado '{token.type.name}' aquí. ¡Vamos a revisar la expresión!")
+
         precedence = PRECEDENCE[token.type]
         
         # Obtener el operando derecho
         right = self.parse_expression(precedence)
         
         # Validar que no se esté dividiendo por cero
-        if token.type == TokenType.DIVIDE and isinstance(right, NumberNode) and right.value == 0:
-            raise ParseError("División por cero no permitida.", position=self.position)
+        if token.type == TokenType.DIVIDIR and isinstance(right, NumberNode) and right.value == 0:
+            raise ParseError("División por cero no permitida. No puedes dividir entre cero.")
 
         # Retornar el nodo de operación binaria
         return BinaryOperationNode(token.type, left, right)
@@ -363,7 +364,7 @@ class Parser:
         Raises:
             ParseError: Si el token actual no es una variable válida.
         """
-        token = self.expect(TokenType.IDENTIFIER, "Se esperaba una variable.")
+        token = self.expect(TokenType.VARIABLE, "Se esperaba una variable. ¡Vamos a poner un nombre válido!")
         return VariableNode(token.value)
 
     def parse_block(self, end_token: TokenType, complement_token: Optional[TokenType] = None) -> List[ASTNode]:
@@ -385,7 +386,7 @@ class Parser:
             if complement_token and self.current_token().type == complement_token:
                 self.advance()
                 continue
-            if self.current_token().type == TokenType.IF_ELSE and end_token == TokenType.IF_END:
+            if self.current_token().type == TokenType.SINO and end_token == TokenType.FIN_SI:
                 break
             block.append(self.parse_statement())
         return block
@@ -444,15 +445,3 @@ class Parser:
             current = self.tokens[self.position]
             self.position += 1
             return current
-
-    def raise_syntax_error(self, message: str) -> None:
-        """
-        Lanza una excepción de sintaxis con información sobre el error.
-
-        Args:
-            message (str): Mensaje de error detallado.
-
-        Raises:
-            ParseError: Excepción de error de sintaxis.
-        """
-        raise ParseError(f"Error de sintaxis en la posición {self.position}: {message}")

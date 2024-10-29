@@ -1,41 +1,33 @@
 import cv2
-import speech_recognition as sr
 from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 from interpreter.evaluator import Evaluator
 from interpreter.ast_node import ast_to_yaml, ast_to_json
 from helpers.speak import speak
+from helpers.recognize_input import recognize_speech
 
-import cv2
 
-def capture_image(camera_index=1, save_path='captured_image.png'):
-    # Inicia la captura de video desde la cámara
+def capture_image(camera_index=0, save_path='captured_image.png'):
     cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
         print("Error: No se puede acceder a la cámara.")
         return None
 
-    # Establece la resolución a 1920x1080 (Full HD)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
     print("Presiona 'c' para capturar la imagen o 'q' para salir.")
 
     while True:
-        # Lee el frame actual de la cámara
         ret, frame = cap.read()
         if not ret:
             print("Error: No se puede capturar el frame.")
             break
 
-        # Muestra el video en una ventana
         cv2.imshow('Vista previa de la cámara', frame)
-
-        # Espera a que el usuario presione 'c' para capturar o 'q' para salir
         key = cv2.waitKey(1) & 0xFF
         if key == ord('c'):
-            # Guarda la imagen capturada
             cv2.imwrite(save_path, frame)
             print(f"Imagen capturada y guardada en {save_path}")
             break
@@ -43,65 +35,80 @@ def capture_image(camera_index=1, save_path='captured_image.png'):
             print("Salida sin capturar imagen.")
             break
 
-    # Libera los recursos
     cap.release()
     cv2.destroyAllWindows()
     return save_path
 
-def main(image_path: str):
+
+def process_code(image_path: str):
+    lexer = Lexer(image_path)
+    tokens = lexer.tokenize()
+    parser = Parser(tokens)
+    ast = parser.parse()
+    evaluator = Evaluator()
+    
+    return tokens, ast, evaluator
+
+def list_tokens(tokens):
+    # Convierte cada token a su representación de cadena
+    token_sequence = ', '.join([str(token.type.name) for token in tokens])
+    speak(f"Los tokens detectados son: {token_sequence}")
+    print(f"Tokens: {token_sequence}")
+
+
+
+def verify_code(evaluator, ast):
     try:
-        # Fase de Lexing
-        lexer = Lexer(image_path)
-        tokens = lexer.tokenize()
-        print(f"Generated tokens: {tokens}")
-
-        # Fase de Parsing
-        parser = Parser(tokens)
-        ast = parser.parse()
-        print("Abstract Syntax Tree (AST):")
-        print(ast_to_yaml(ast))
-
-        # Fase de Evaluación
-        evaluator = Evaluator()
         evaluator.evaluate(ast)
-
+        speak("El código no contiene errores.")
+        print("El código no contiene errores.")
     except Exception as e:
-        speak(f"Error procesando imagen: {e}")
-        print(f"Error processing image: {e}")
+        speak(f"Se detectó un error: {str(e)}")
+        print(f"Error en el código: {str(e)}")
 
-def recognize_voice():
-    # Inicializa el reconocimiento de voz
-    recognizer = sr.Recognizer()
-    microphone = sr.Microphone()
 
-    with microphone as source:
-        print("Ajustando micrófono para el ruido ambiental...")
-        recognizer.adjust_for_ambient_noise(source)
-        print("Micrófono listo, di 'Correr' para comenzar...")
-        
-        while True:
-            print("Escuchando...")
-            audio = recognizer.listen(source)
+def execute_code(evaluator, ast):
+    try:
+        evaluator.evaluate(ast)
+        speak("El código se ha ejecutado correctamente.")
+        print("Código ejecutado correctamente.")
+    except Exception as e:
+        speak(f"Se produjo un error durante la ejecución: {str(e)}")
+        print(f"Error durante la ejecución: {str(e)}")
 
-            try:
-                # Reconoce el audio
-                voice_input = recognizer.recognize_google(audio, language="es-ES")
-                print(f"Escuchado: {voice_input}")
 
-                if "correr" in voice_input.lower():
-                    print("Iniciando captura de imagen y ejecución del programa.")
-                    image_path = capture_image()  # Captura la imagen
-                    if image_path:
-                        main(image_path)  # Procesa la imagen capturada
+def main(image_path):
+    while True:
+        speak("Ingresa el comando que deseas. Puedes decir 'listar', 'verificar' o 'ejecutar'.")
 
-            except sr.UnknownValueError:
-                print("No se entendió lo que dijiste. Intenta nuevamente.")
-            except sr.RequestError as e:
-                print(f"Error de reconocimiento de voz: {e}")
-            except Exception as e:
-                print(f"Error inesperado: {e}")
+        voice_input = recognize_speech()
+
+        if voice_input:
+            voice_input = voice_input.lower()
+            print(f"Comando recibido: {voice_input}")
+
+            if voice_input in ["listar", "lista"]:
+                speak("Listando tokens detectados.")  
+                if image_path:
+                    tokens, ast, evaluator = process_code(image_path)
+                    list_tokens(tokens)
+
+            elif voice_input in ["verificar", "verifica"]:
+                speak("Verificando código.")  
+                if image_path:
+                    tokens, ast, evaluator = process_code(image_path)
+                    verify_code(evaluator, ast)
+
+            elif voice_input in ["ejecutar", "ejecuta"]:
+                speak("Ejecutando el código.")  
+                if image_path:
+                    tokens, ast, evaluator = process_code(image_path)
+                    execute_code(evaluator, ast)
+        else:
+            speak("No se pudo entender el comando. Intenta nuevamente.")
+
 
 if __name__ == "__main__":
-    # image = capture_image()
-    # main(image)
-    main("src/images/p3.png")
+    image_path = capture_image()
+    image_path = "src/images/p2.png"
+    main(image_path)

@@ -8,55 +8,55 @@ class TokenType(Enum):
     """
 
     # Start and EOF
-    START = auto()
-    END = auto()
+    INICIO = auto()
+    FIN = auto()
 
     # Control Structures
-    IF_START = auto()
-    IF_ELSE = auto()
-    IF_END = auto()
-    FOR_START = auto()
-    FOR_END = auto()
-    TO = auto()
-    WHILE_START = auto()
-    WHILE_END = auto()
-    COMPLEMENT = auto()
+    SI = auto()
+    SINO = auto()
+    FIN_SI = auto()
+    PARA = auto()
+    FIN_PARA = auto()
+    HASTA = auto()
+    MIENTRAS = auto()
+    FIN_MIENTRAS = auto()
+    COMPLEMENTO = auto()
 
     # Operators
-    PLUS = auto()
-    MINUS = auto()
-    MULTIPLY = auto()
-    DIVIDE = auto()
+    MAS = auto()
+    MENOS = auto()
+    MULTIPLICAR = auto()
+    DIVIDIR = auto()
     MODULO = auto()
 
     # Comparison Operators
-    EQUAL = auto()
-    GREATER = auto()
-    LESS = auto()
-    GREATER_EQUAL = auto()
-    LESS_EQUAL = auto()
-    DIFFERENT = auto()
+    IGUAL = auto()
+    MAYOR_QUE = auto()
+    MENOR_QUE = auto()
+    MAYOR_O_IGUAL_QUE = auto()
+    MENOR_O_IGUAL_QUE = auto()
+    DIFERENTE = auto()
 
     # Logical Operators
-    AND = auto()
-    OR = auto()
-    NOT = auto()
+    Y = auto()
+    O = auto()
+    NO = auto()
 
     # Parentheses
-    LPAREN = auto()
-    RPAREN = auto()
+    PARENTESIS_IZQUIERDO = auto()
+    PARENTESIS_DERECHO = auto()
 
     # Literals and Identifiers
-    NUMBER = auto()
-    IDENTIFIER = auto()
+    NUMERO = auto()
+    VARIABLE = auto()
 
     # Keywords
-    SAY = auto()
-    INPUT = auto()
-    SET = auto()
+    DECIR = auto()
+    LEER = auto()
+    ASIGNAR = auto()
 
     # Miscellaneous
-    UNKNOWN = auto()
+    DESCONOCIDO = auto()
 
 
 @dataclass

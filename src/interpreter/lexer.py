@@ -1,12 +1,22 @@
 import cv2
 import numpy as np
-import logging
-from interpreter.tokens import Token, TokenType
-from typing import List, Dict
+from .tokens import Token, TokenType
+from typing import List
+
+
+class CustomFileNotFoundError(Exception):
+    """Excepción lanzada cuando no se encuentra un archivo."""
+    def __init__(self, file_path):
+        message = f"No pude encontrar el archivo en la ruta. Asegúrate de que esté en el lugar correcto."
+        super().__init__(message)
+
 
 class LexerError(Exception):
     """Excepción lanzada cuando ocurre un error durante el análisis léxico."""
-    pass
+    def __init__(self, message):
+        friendly_message = f"Algo salió mal: {message}. Revisa que todos los bloques estén bien colocados."
+        super().__init__(friendly_message)
+
 
 class Lexer:
     """
@@ -17,12 +27,12 @@ class Lexer:
     # CATEGORY_COLOR_RANGES = {
     #     'NUMBER': ((20, 150, 150), (30, 255, 255)),                # Amarillo (ajustado)
     #     'CONTROL_STRUCTURE': ((35, 100, 100), (80, 255, 255)),     # Verde (ajustado)
-    #     'OPERATOR': ((85, 150, 100), (110, 255, 255)),             # Cian (ajustado)
+    #     'OPERATOR': ((95, 51, 230), (105, 102, 255)),             # Cian (ajustado)
     #     'SET': ((5, 150, 100), (18, 255, 255)),                    # Naranja (ajustado)
     #     'VARIABLE': ((135, 100, 100), (165, 255, 255)),            # Fucsia (ajustado)
     #     'PRINT': ((100, 100, 100), (130, 255, 255)),               # Azul oscuro (ajustado)
-    #     # 'START_END': ((170, 120, 70), (180, 255, 255))         # Rango adicional para rojo
-    #     'START_END': ((0, 100, 100), (10, 255, 255))         # Rango adicional para rojo
+    #     'START_END': ((170, 120, 70), (180, 255, 255))         # Rango adicional para rojo
+    #     # 'START_END': ((0, 100, 100), (10, 255, 255))         # Rango adicional para rojo
     # }
 
     CATEGORY_COLOR_RANGES = {
@@ -35,65 +45,64 @@ class Lexer:
         'START_END': ((0, 100, 100), (10, 255, 255))             # Rojo ajustado
     }
 
-    # Mapeo de códigos de barras a tipos de token por categoría
     CATEGORY_BARCODE_MAPPING = {
         'NUMBER': {
-            '0000': (TokenType.NUMBER, 0),
-            '0001': (TokenType.NUMBER, 1),
-            '0010': (TokenType.NUMBER, 2),
-            '0011': (TokenType.NUMBER, 3),
-            '0100': (TokenType.NUMBER, 4),
-            '0101': (TokenType.NUMBER, 5),
-            '0110': (TokenType.NUMBER, 6),
-            '0111': (TokenType.NUMBER, 7),
-            '1000': (TokenType.NUMBER, 8),
-            '1001': (TokenType.NUMBER, 9),
+            '0000': (TokenType.NUMERO, 0),
+            '0001': (TokenType.NUMERO, 1),
+            '0010': (TokenType.NUMERO, 2),
+            '0011': (TokenType.NUMERO, 3),
+            '0100': (TokenType.NUMERO, 4),
+            '0101': (TokenType.NUMERO, 5),
+            '0110': (TokenType.NUMERO, 6),
+            '0111': (TokenType.NUMERO, 7),
+            '1000': (TokenType.NUMERO, 8),
+            '1001': (TokenType.NUMERO, 9),
         },
         'VARIABLE': {
-            '0000': (TokenType.IDENTIFIER, 'A'),
-            '0001': (TokenType.IDENTIFIER, 'B'),
-            '0010': (TokenType.IDENTIFIER, 'C'),
-            '0011': (TokenType.IDENTIFIER, 'D'),
-            '0100': (TokenType.IDENTIFIER, 'E'),
+            '0000': (TokenType.VARIABLE, 'A'),
+            '0001': (TokenType.VARIABLE, 'B'),
+            '0010': (TokenType.VARIABLE, 'C'),
+            '0011': (TokenType.VARIABLE, 'D'),
+            '0100': (TokenType.VARIABLE, 'E'),
         },
         'CONTROL_STRUCTURE': {
-            '0000': TokenType.FOR_START,
-            '0001': TokenType.FOR_END,
-            '0010': TokenType.WHILE_START,
-            '0011': TokenType.WHILE_END,
-            '0100': TokenType.IF_START,
-            '0101': TokenType.IF_ELSE,
-            '0110': TokenType.IF_END,
-            '0111': TokenType.TO,
+            '0000': TokenType.PARA,
+            '0001': TokenType.FIN_PARA,
+            '0010': TokenType.MIENTRAS,
+            '0011': TokenType.FIN_MIENTRAS,
+            '0100': TokenType.SI,
+            '0101': TokenType.SINO,
+            '0110': TokenType.FIN_SI,
+            '0111': TokenType.HASTA,
         },
         'OPERATOR': {
-            '0000': TokenType.PLUS,
-            '0001': TokenType.MINUS,
-            '0010': TokenType.MULTIPLY,
-            '0011': TokenType.DIVIDE,
-            '0100': TokenType.GREATER,
-            '0101': TokenType.LESS,
-            '0110': TokenType.GREATER_EQUAL,
-            '0111': TokenType.LESS_EQUAL,
-            '1000': TokenType.EQUAL,
-            '1001': TokenType.DIFFERENT,
-            '1010': TokenType.AND,
-            '1011': TokenType.OR,
-            '1100': TokenType.NOT,
-            '1101': TokenType.LPAREN,
-            '1110': TokenType.RPAREN,
+            '0000': TokenType.MAS,
+            '0001': TokenType.MENOS,
+            '0010': TokenType.MULTIPLICAR,
+            '0011': TokenType.DIVIDIR,
+            '0100': TokenType.MAYOR_QUE,
+            '0101': TokenType.MENOR_QUE,
+            '0110': TokenType.MAYOR_O_IGUAL_QUE,
+            '0111': TokenType.MENOR_O_IGUAL_QUE,
+            '1000': TokenType.IGUAL,
+            '1001': TokenType.DIFERENTE,
+            '1010': TokenType.Y,
+            '1011': TokenType.O,
+            '1100': TokenType.NO,
+            '1101': TokenType.PARENTESIS_IZQUIERDO,
+            '1110': TokenType.PARENTESIS_DERECHO,
             '1111': TokenType.MODULO
         },
         'SET': {
-            '0000': TokenType.SET
+            '0000': TokenType.ASIGNAR
         },
         'PRINT': {
-            '0000': TokenType.SAY,
-            '1111': TokenType.INPUT,
+            '0000': TokenType.DECIR,
+            '1111': TokenType.LEER,
         },
         'START_END': {
-            '0000': TokenType.START,
-            '1111': TokenType.END
+            '0000': TokenType.INICIO,
+            '1111': TokenType.FIN
         }
     }
 
@@ -107,7 +116,7 @@ class Lexer:
         """
         self.image = cv2.imread(image_path)
         if self.image is None:
-            raise FileNotFoundError(f"El archivo de imagen no se encontró en la ruta: {image_path}")
+            raise CustomFileNotFoundError(image_path)
 
         # Convertir la imagen de BGR a HSV para trabajar con los rangos de color
         self.hsv_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
@@ -196,7 +205,7 @@ class Lexer:
                 return Token(token_type, value)
             return Token(token_data)
         
-        return Token(TokenType.UNKNOWN)
+        return Token(TokenType.DESCONOCIDO)
 
     def _extract_bounding_boxes(self) -> List[tuple]:
         """
@@ -273,9 +282,9 @@ class Lexer:
                 if self.display:
                     block_image = masked_image[y:y+h, x:x+w].copy()
                     cv2.putText(block_image, f"{category}_{barcode}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                    # cv2.imshow(f"Bloque: {category}_{barcode}", block_image)
-                    # cv2.waitKey(0)
-                    # cv2.destroyAllWindows()
+                    cv2.imshow(f"Bloque: {category}_{barcode}", block_image)
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
 
     def _mask_block_area(self, contour) -> np.ndarray:
         """
@@ -297,9 +306,9 @@ class Lexer:
         masked_image = cv2.bitwise_and(self.image, self.image, mask=mask)
         
         # Mostrar la imagen enmascarada
-        # cv2.imshow("Masked Block Area", masked_image)
-        # cv2.waitKey(0)  # Espera hasta que se presione una tecla
-        # cv2.destroyAllWindows()  # Cierra la ventana
+        cv2.imshow("Masked Block Area", masked_image)
+        cv2.waitKey(0)  # Espera hasta que se presione una tecla
+        cv2.destroyAllWindows()  # Cierra la ventana
 
         return masked_image
 
@@ -317,13 +326,13 @@ class Lexer:
         x, y, w, h = bbox
         barcode_roi = masked_image[y + int(h * 0.3):y + int(h * 0.7), x + int(w * 0.2):x + int(w * 0.8)]
         barcode_gray = cv2.cvtColor(barcode_roi, cv2.COLOR_BGR2GRAY)
-        barcode_blur = cv2.GaussianBlur(barcode_gray, (5, 5), 0)
+        barcode_blur = cv2.GaussianBlur(barcode_gray, (7, 7), 0)
         _, barcode_thresh = cv2.threshold(barcode_blur, 120, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         # Operaciones morfológicas para limpiar la imagen
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         barcode_clean = cv2.morphologyEx(barcode_thresh, cv2.MORPH_OPEN, kernel)
-        # cv2.imshow('barcode_clean', barcode_clean)
-        # cv2.waitKey(0)
+        cv2.imshow('barcode_clean', barcode_clean)
+        cv2.waitKey(0)
         contours, _ = cv2.findContours(barcode_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Filtrar contornos que no sean barras y obtener sus anchos
@@ -331,8 +340,7 @@ class Lexer:
         bar_contours.sort(key=lambda cnt: cv2.boundingRect(cnt)[0])
 
         if len(bar_contours) < 5:
-            logging.warning("No se detectaron 5 barras en el código de barras.")
-            return None
+            raise LexerError("No se detectaron las 5 barras del código correctamente.")
 
         ref_width = cv2.boundingRect(bar_contours[0])[2]
         code = ''.join(['1' if cv2.boundingRect(cnt)[2] >= ref_width * 1.5 else '0' for cnt in bar_contours[1:5]])
@@ -341,8 +349,8 @@ class Lexer:
 
         barcode_contour_img = cv2.cvtColor(barcode_clean, cv2.COLOR_GRAY2BGR)
         cv2.drawContours(barcode_contour_img, bar_contours, -1, (0, 255, 0), 2)
-        # cv2.imshow("Barcode Contours", barcode_contour_img)
-        # cv2.waitKey(0)
+        cv2.imshow("Barcode Contours", barcode_contour_img)
+        cv2.waitKey(0)
         
         return code
 
