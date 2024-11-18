@@ -58,23 +58,15 @@ def list_tokens(tokens):
 
 
 def verify_code(evaluator, ast):
-    try:
-        evaluator.evaluate(ast)
-        speak("El código no contiene errores.")
-        print("El código no contiene errores.")
-    except Exception as e:
-        speak(f"Se detectó un error: {str(e)}")
-        print(f"Error en el código: {str(e)}")
+    evaluator.evaluate(ast)
+    speak("El código no contiene errores.")
+    print("El código no contiene errores.")
 
 
 def execute_code(evaluator, ast):
-    try:
-        evaluator.evaluate(ast)
-        speak("El código se ha ejecutado correctamente.")
-        print("Código ejecutado correctamente.")
-    except Exception as e:
-        speak(f"Se produjo un error durante la ejecución: {str(e)}")
-        print(f"Error durante la ejecución: {str(e)}")
+    evaluator.evaluate(ast)
+    speak("El código se ha ejecutado correctamente.")
+    print("Código ejecutado correctamente.")
 
 
 def main(image_path):
@@ -108,7 +100,20 @@ def main(image_path):
             speak("No se pudo entender el comando. Intenta nuevamente.")
 
 
+# def main(image_path):
+#     lexer = Lexer(image_path)
+#     tokens = lexer.tokenize()
+#     print(tokens)
+
+#     parser = Parser(tokens)
+#     ast = parser.parse()
+#     print(ast_to_yaml(ast))
+
+#     evaluator = Evaluator()
+#     evaluator.evaluate(ast)
+
+
 if __name__ == "__main__":
-    image_path = capture_image()
-    image_path = "src/images/p2.png"
+    # image_path = capture_image()
+    image_path = "src/images/bitmap1.png"
     main(image_path)
