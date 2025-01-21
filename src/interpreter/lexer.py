@@ -24,26 +24,25 @@ class Lexer:
     """
 
     # Rango de colores en formato HSV para cada categoría de bloque
-    # CATEGORY_COLOR_RANGES = {
-    #     'NUMBER': ((20, 150, 150), (30, 255, 255)),                # Amarillo (ajustado)
-    #     'CONTROL_STRUCTURE': ((35, 100, 100), (80, 255, 255)),     # Verde (ajustado)
-    #     'OPERATOR': ((95, 51, 230), (105, 102, 255)),             # Cian (ajustado)
-    #     'SET': ((5, 150, 100), (18, 255, 255)),                    # Naranja (ajustado)
-    #     'VARIABLE': ((135, 100, 100), (165, 255, 255)),            # Fucsia (ajustado)
-    #     'PRINT': ((100, 100, 100), (130, 255, 255)),               # Azul oscuro (ajustado)
-    #     'START_END': ((170, 120, 70), (180, 255, 255))         # Rango adicional para rojo
-    #     # 'START_END': ((0, 100, 100), (10, 255, 255))         # Rango adicional para rojo
-    # }
-
     CATEGORY_COLOR_RANGES = {
-        'NUMBER': ((25, 150, 150), (35, 255, 255)),              # Amarillo ajustado
-        'CONTROL_STRUCTURE': ((35, 100, 100), (85, 255, 255)),   # Verde ajustado
-        'OPERATOR': ((85, 150, 100), (100, 255, 255)),           # Cyan ajustado
-        'SET': ((10, 150, 100), (25, 255, 255)),                 # Naranja ajustado
-        'VARIABLE': ((140, 100, 100), (160, 255, 255)),          # Fucsia ajustado
-        'PRINT': ((100, 100, 100), (120, 255, 255)),             # Azul ajustado
-        'START_END': ((0, 100, 100), (10, 255, 255))             # Rojo ajustado
+        'NUMBER': ((20, 100, 100), (40, 255, 255)),                # Amarillo (ajustado)
+        'CONTROL_STRUCTURE': ((35, 100, 100), (80, 255, 255)),     # Verde (ajustado)
+        'OPERATOR': ((95, 30, 200), (102, 150, 255)),             # Cian (ajustado)
+        'SET': ((4, 100, 100), (20, 255, 255)),                    # Naranja ajustado (limitado a tonos más cercanos)
+        'VARIABLE': ((140, 40, 150), (160, 255, 255)),            # Fucsia (ajustado)
+        'PRINT': ((105, 100, 100), (130, 255, 255)),               # Azul oscuro (ajustado)
+        'START_END': ((170, 120, 70), (180, 255, 255))             # Rojo ajustado
     }
+
+    # CATEGORY_COLOR_RANGES = {
+    #     'NUMBER': ((25, 150, 150), (35, 255, 255)),              # Amarillo ajustado
+    #     'CONTROL_STRUCTURE': ((35, 100, 100), (85, 255, 255)),   # Verde ajustado
+    #     'OPERATOR': ((85, 150, 100), (100, 255, 255)),           # Cyan ajustado
+    #     'SET': ((10, 150, 100), (25, 255, 255)),                 # Naranja ajustado
+    #     'VARIABLE': ((140, 100, 100), (160, 255, 255)),          # Fucsia ajustado
+    #     'PRINT': ((100, 100, 100), (120, 255, 255)),             # Azul ajustado
+    #     'START_END': ((0, 100, 100), (10, 255, 255))             # Rojo ajustado
+    # }
 
     CATEGORY_BARCODE_MAPPING = {
         'NUMBER': {
@@ -147,6 +146,7 @@ class Lexer:
             
             # Identificar la categoría del bloque basándose en el color dominante
             category = self._detect_category_by_color(dominant_hsv)
+            # print(f"Detected category for block at position {block['position']}: {category}")
             block['category'] = category
             
             # Mapeo del bloque a un token
@@ -178,7 +178,7 @@ class Lexer:
             lower_range[1] <= dominant_hsv[1] <= upper_range[1] and \
             lower_range[2] <= dominant_hsv[2] <= upper_range[2]:
                 return category
-        return 'UNKNOWN'
+        return 'DESCONOCIDO'
 
     def _map_block_to_token(self, block: dict) -> Token:
         """
@@ -305,8 +305,12 @@ class Lexer:
         # Aplicar la máscara a la imagen
         masked_image = cv2.bitwise_and(self.image, self.image, mask=mask)
         
-        # Mostrar la imagen enmascarada
-        cv2.imshow("Masked Block Area", masked_image)
+        # Redimensionar la imagen a un tamaño más manejable (por ejemplo, 50% del tamaño original)
+        scale_factor = 0.5  # Cambia esto para ajustar el tamaño de la ventana
+        resized_image = cv2.resize(masked_image, (0, 0), fx=scale_factor, fy=scale_factor)
+        
+        # Mostrar la imagen redimensionada
+        cv2.imshow("Masked Block Area", resized_image)
         cv2.waitKey(0)  # Espera hasta que se presione una tecla
         cv2.destroyAllWindows()  # Cierra la ventana
 
@@ -324,10 +328,11 @@ class Lexer:
             str: Código binario de 4 bits que identifica el bloque.
         """
         x, y, w, h = bbox
-        barcode_roi = masked_image[y + int(h * 0.3):y + int(h * 0.7), x + int(w * 0.2):x + int(w * 0.8)]
+        barcode_roi = masked_image[y + int(h * 0.25):y + int(h * 0.7), x + int(w * 0.2):x + int(w * 0.8)]
         barcode_gray = cv2.cvtColor(barcode_roi, cv2.COLOR_BGR2GRAY)
-        barcode_blur = cv2.GaussianBlur(barcode_gray, (7, 7), 0)
+        barcode_blur = cv2.GaussianBlur(barcode_gray, (3, 3), 0)
         _, barcode_thresh = cv2.threshold(barcode_blur, 120, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
         # Operaciones morfológicas para limpiar la imagen
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         barcode_clean = cv2.morphologyEx(barcode_thresh, cv2.MORPH_OPEN, kernel)

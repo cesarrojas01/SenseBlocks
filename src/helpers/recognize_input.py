@@ -21,7 +21,7 @@ def recognize_speech() -> str:
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source)
-        print("Por favor, habla ahora...")
+        speak("Por favor, habla ahora...")
         audio = recognizer.listen(source)
         return convert_audio_to_text(audio, recognizer)
 

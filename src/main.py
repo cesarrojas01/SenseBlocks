@@ -114,6 +114,6 @@ def main(image_path):
 
 
 if __name__ == "__main__":
-    # image_path = capture_image()
-    image_path = "src/images/bitmap1.png"
+    image_path = capture_image()
+   # image_path = "1.png"
     main(image_path)
